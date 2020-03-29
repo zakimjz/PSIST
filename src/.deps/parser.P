@@ -1,0 +1,135 @@
+parser.o: parser.cpp parser.h /usr/include/g++-2/iostream \
+ /usr/include/g++-2/iostream.h /usr/include/g++-2/streambuf.h \
+ /usr/include/libio.h /usr/include/_G_config.h \
+ /usr/include/bits/types.h /usr/include/features.h \
+ /usr/include/sys/cdefs.h /usr/include/gnu/stubs.h \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h \
+ /usr/include/g++-2/vector /usr/include/g++-2/stl_algobase.h \
+ /usr/include/g++-2/stl_config.h /usr/include/g++-2/stl_relops.h \
+ /usr/include/g++-2/stl_pair.h /usr/include/g++-2/type_traits.h \
+ /usr/include/string.h \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/limits.h \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/syslimits.h \
+ /usr/include/limits.h /usr/include/stdlib.h \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/new.h \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/new \
+ /usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/exception \
+ /usr/include/g++-2/stl_iterator.h /usr/include/g++-2/stl_alloc.h \
+ /usr/include/assert.h /usr/include/pthread.h /usr/include/sched.h \
+ /usr/include/time.h /usr/include/bits/sched.h \
+ /usr/include/bits/time.h /usr/include/signal.h \
+ /usr/include/bits/sigset.h /usr/include/bits/pthreadtypes.h \
+ /usr/include/bits/sigthread.h /usr/include/g++-2/stl_construct.h \
+ /usr/include/g++-2/stl_uninitialized.h \
+ /usr/include/g++-2/stl_vector.h /usr/include/g++-2/stl_bvector.h \
+ /usr/include/g++-2/string /usr/include/g++-2/std/bastring.h \
+ /usr/include/g++-2/cstddef /usr/include/g++-2/std/straits.h \
+ /usr/include/g++-2/cctype /usr/include/ctype.h /usr/include/endian.h \
+ /usr/include/bits/endian.h /usr/include/g++-2/cstring \
+ /usr/include/g++-2/alloc.h /usr/include/g++-2/iterator \
+ /usr/include/g++-2/std/bastring.cc /usr/include/g++-2/set \
+ /usr/include/g++-2/stl_tree.h /usr/include/g++-2/stl_function.h \
+ /usr/include/g++-2/stl_set.h /usr/include/g++-2/stl_multiset.h \
+ /usr/include/g++-2/fstream /usr/include/g++-2/fstream.h \
+ /usr/include/g++-2/strstream /usr/include/g++-2/strstream.h \
+ /usr/include/g++-2/strfile.h /usr/include/g++-2/map \
+ /usr/include/g++-2/stl_map.h /usr/include/g++-2/stl_multimap.h \
+ /usr/include/g++-2/utility /usr/include/g++-2/algorithm \
+ /usr/include/g++-2/stl_tempbuf.h /usr/include/g++-2/stl_algo.h \
+ /usr/include/g++-2/stl_heap.h /usr/include/math.h \
+ /usr/include/bits/huge_val.h /usr/include/bits/mathdef.h \
+ /usr/include/bits/mathcalls.h /usr/include/bits/mathinline.h \
+ /usr/include/unistd.h /usr/include/bits/posix_opt.h \
+ /usr/include/bits/confname.h /usr/include/stdio.h \
+ /usr/include/bits/stdio_lim.h /usr/include/bits/stdio.h \
+ /usr/include/dirent.h /usr/include/bits/dirent.h \
+ /usr/include/sys/stat.h /usr/include/bits/stat.h
+parser.cpp :
+parser.h :
+/usr/include/g++-2/iostream :
+/usr/include/g++-2/iostream.h :
+/usr/include/g++-2/streambuf.h :
+/usr/include/libio.h :
+/usr/include/_G_config.h :
+/usr/include/bits/types.h :
+/usr/include/features.h :
+/usr/include/sys/cdefs.h :
+/usr/include/gnu/stubs.h :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stddef.h :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/stdarg.h :
+/usr/include/g++-2/vector :
+/usr/include/g++-2/stl_algobase.h :
+/usr/include/g++-2/stl_config.h :
+/usr/include/g++-2/stl_relops.h :
+/usr/include/g++-2/stl_pair.h :
+/usr/include/g++-2/type_traits.h :
+/usr/include/string.h :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/limits.h :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/syslimits.h :
+/usr/include/limits.h :
+/usr/include/stdlib.h :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/new.h :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/new :
+/usr/lib/gcc-lib/i386-redhat-linux/egcs-2.91.66/include/exception :
+/usr/include/g++-2/stl_iterator.h :
+/usr/include/g++-2/stl_alloc.h :
+/usr/include/assert.h :
+/usr/include/pthread.h :
+/usr/include/sched.h :
+/usr/include/time.h :
+/usr/include/bits/sched.h :
+/usr/include/bits/time.h :
+/usr/include/signal.h :
+/usr/include/bits/sigset.h :
+/usr/include/bits/pthreadtypes.h :
+/usr/include/bits/sigthread.h :
+/usr/include/g++-2/stl_construct.h :
+/usr/include/g++-2/stl_uninitialized.h :
+/usr/include/g++-2/stl_vector.h :
+/usr/include/g++-2/stl_bvector.h :
+/usr/include/g++-2/string :
+/usr/include/g++-2/std/bastring.h :
+/usr/include/g++-2/cstddef :
+/usr/include/g++-2/std/straits.h :
+/usr/include/g++-2/cctype :
+/usr/include/ctype.h :
+/usr/include/endian.h :
+/usr/include/bits/endian.h :
+/usr/include/g++-2/cstring :
+/usr/include/g++-2/alloc.h :
+/usr/include/g++-2/iterator :
+/usr/include/g++-2/std/bastring.cc :
+/usr/include/g++-2/set :
+/usr/include/g++-2/stl_tree.h :
+/usr/include/g++-2/stl_function.h :
+/usr/include/g++-2/stl_set.h :
+/usr/include/g++-2/stl_multiset.h :
+/usr/include/g++-2/fstream :
+/usr/include/g++-2/fstream.h :
+/usr/include/g++-2/strstream :
+/usr/include/g++-2/strstream.h :
+/usr/include/g++-2/strfile.h :
+/usr/include/g++-2/map :
+/usr/include/g++-2/stl_map.h :
+/usr/include/g++-2/stl_multimap.h :
+/usr/include/g++-2/utility :
+/usr/include/g++-2/algorithm :
+/usr/include/g++-2/stl_tempbuf.h :
+/usr/include/g++-2/stl_algo.h :
+/usr/include/g++-2/stl_heap.h :
+/usr/include/math.h :
+/usr/include/bits/huge_val.h :
+/usr/include/bits/mathdef.h :
+/usr/include/bits/mathcalls.h :
+/usr/include/bits/mathinline.h :
+/usr/include/unistd.h :
+/usr/include/bits/posix_opt.h :
+/usr/include/bits/confname.h :
+/usr/include/stdio.h :
+/usr/include/bits/stdio_lim.h :
+/usr/include/bits/stdio.h :
+/usr/include/dirent.h :
+/usr/include/bits/dirent.h :
+/usr/include/sys/stat.h :
+/usr/include/bits/stat.h :

@@ -1,0 +1,488 @@
+
+/*
+independent of stree_map, stree_hashmap and stree_array
+*/
+
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <algorithm>
+#include "stree.h"
+#include "structures.h"
+
+#define topk      100
+#define knn       10
+
+//#define max(a,b) a>b?a:b
+//#define min(a,b) a<b?a:b
+
+extern int bin_no;
+extern int openGapPenalty;
+extern int extensionGapPenalty;
+
+using namespace std;
+
+#ifndef __QRANK_H
+#define __QRANK_H
+
+
+class pdbscop{
+ public:
+
+    pdbscop():name(""), cl(0), fold(0), sf(0), fam(0) {};
+    pdbscop(string n, int c, int f, int s, int fam):name(n), cl(c), fold(f), sf(s), fam(f) {};
+    string name;
+    int cl;
+    int fold;
+    int sf;
+    int fam;
+};
+
+
+class _rank_less 
+{
+ protected:
+  typedef pair<int, float> match_type;
+ public:
+  bool operator() (const match_type& a, const match_type& b)
+    {
+      return a.second > b.second ;
+    }
+};
+
+
+class qrank
+{
+ private:
+
+  int                     query_num;
+  vector<int>             sf_hits, pcl_num, psf_num, pfd_num;
+  
+ public:
+  vector<pdbscop>         pdbs;
+
+  qrank() : query_num(0) {
+    sf_hits.resize(topk);
+    pcl_num.resize(knn);
+    psf_num.resize(knn);
+    pfd_num.resize(knn);
+  };
+    
+  void set_query_num(int n) {query_num = n;}
+  int get_query_num() {return query_num; }
+  
+  void add_pdb(pdbscop& p){ pdbs.push_back(p);}
+  
+  void read_pdbs(char* pdbsnamelist){
+    
+    ifstream fin(pdbsnamelist);
+    while (fin){  
+      if (! fin.good()) continue; // skip newlines, etc.
+      pdbscop p;
+      fin >> p.name >>  p.cl >> p.fold >> p.sf >> p.fam;
+      if(p.name.size() >0 )
+	pdbs.push_back(p);
+    }
+    fin.close() ;
+    //cout << "--pdbs size--" << pdbs.size() << endl;
+  }
+  
+  void add_to_perct_hits(pdbscop& query,vector<pair<int,float> >& finalrank){
+    
+      ++query_num;
+      
+      sort(finalrank.begin(), finalrank.end(), _rank_less() );
+      
+      int f_size = finalrank.size();
+      int out_num = min(f_size, topk);
+      //cout << "out_num" << out_num << endl;
+      
+      //computer superfamily hits
+      for(int i=0; i< out_num ; i++){
+	if(finalrank[i].first < 0) break;
+	if(pdbs[finalrank[i].first].sf == query.sf)
+	  sf_hits[i]++;
+      }
+      
+      map<int, float> protein_sf;
+      map<int, float> protein_cl;
+      map<int, float> protein_fd;
+      
+      int i =0;
+      int counter =0;
+      
+      while( counter < knn && i < f_size){
+	if(finalrank[i].first < 0) break;
+	    
+	if(pdbs[finalrank[i].first].name != query.name){
+	  protein_sf[pdbs[finalrank[i].first].sf] += finalrank[i].second;
+	  protein_cl[pdbs[finalrank[i].first].cl] += finalrank[i].second;
+	  protein_fd[pdbs[finalrank[i].first].fold] += finalrank[i].second;
+		
+	  int predicted_cl, predicted_sf, predicted_fd;
+	  float sf_count = 0;
+	  float cl_count = 0;
+	  float fd_count = 0;
+
+	  //find superfamily with the max score
+	  for(map<int, float>::iterator mi=protein_sf.begin(); mi!=protein_sf.end(); mi++){
+	    if(mi->second > sf_count){
+	      sf_count = mi->second;
+	      predicted_sf = mi->first;
+	    }
+	  }
+		
+	  if(predicted_sf == query.sf)
+	    psf_num[counter]++;
+	  
+	  //find the class with the max score
+	  for(map<int, float>::iterator mi=protein_cl.begin(); mi!=protein_cl.end(); mi++){
+	    if(mi->second > cl_count){
+	      cl_count = mi->second;
+	      predicted_cl = mi->first;
+	    }
+	  }
+		
+	  if(predicted_cl == query.cl)
+	    pcl_num[counter]++;
+
+	  
+	  for(map<int, float>::iterator mi=protein_fd.begin(); mi!=protein_fd.end(); mi++){
+	    if(mi->second > fd_count){
+	      fd_count = mi->second;
+	      predicted_fd = mi->first;
+	    }
+	  }
+		
+	  if(predicted_fd == query.fold)
+	    pfd_num[counter]++;
+	  
+	  
+	  ++counter;
+	}// end if
+
+	++i;
+      } //end while
+
+    }
+    
+    
+    void print_arank(pdbscop& query,vector<pair<int,float> >& finalrank){
+
+      sort(finalrank.begin(), finalrank.end(), _rank_less() );
+      
+      cout << query.name << "--" << query.cl << "--" << query.sf << endl; 
+      cout << "------------------------------------------" <<endl;
+      
+      int out_num = min(finalrank.size(), topk);
+      for(int i=0; i<out_num; i++){
+	if(finalrank[i].first < 0) break;
+	if(query.sf ==  pdbs[finalrank[i].first].sf)
+	  cout << pdbs[finalrank[i].first].name << "--" << pdbs[finalrank[i].first].cl << "--" << pdbs[finalrank[i].first].sf << "--YYY--" << "--score--" << finalrank[i].second << endl;
+	else
+	  cout << pdbs[finalrank[i].first].name << "--" << pdbs[finalrank[i].first].cl << "--" << pdbs[finalrank[i].first].sf << "--NNN--" << "--score--" << finalrank[i].second << endl;
+      }
+    }
+    
+    void print_perct_hits(){
+	
+      cout << endl << "--query--num--" << query_num << endl;
+      if(query_num == 0){
+	cerr << "no query is found" << endl;
+	return;
+	//exit(0);
+      }
+      
+      cout << endl << "----Retrieval-Test----";
+      float sum = 0;
+      for(int i=0; i< topk ; i++){
+	sum += sf_hits[i];
+	if ((i % 10) == 0)
+	  cout << endl << "(" << i << ")\t";
+	cout << sum / (query_num) << " ";
+      }
+      
+      cout << endl;
+      cout << endl << "-----SuperFamily--Prediction---Percentage------";
+      for(int i=0; i< knn ; i++){
+	if ((i % 10) == 0)
+	  cout << endl <<"(" << i << ")\t" ;
+	cout << (float) psf_num[i]/(query_num) << " ";
+      }
+	
+      cout << endl;  
+      cout << endl << "-----Class---------Prediction---Percentage------";
+      for(int i=0; i< knn ; i++){
+	if ((i % 10) == 0)
+	  cout << endl <<"(" << i << ")\t" ;
+	cout << (float) pcl_num[i]/(query_num) << " ";
+      }
+      cout << endl;  
+
+
+      
+      //cout << endl << "-----FOLD--Prediction---Percentage------";
+      //for(int i=0; i< knn ; i++){
+      //if ((i % 10) == 0)
+      //  cout << endl <<"(" << i << ")\t" ;
+      //cout << (float) pfd_num[i]/(query_num) << " ";
+      // }
+      // cout << endl;
+
+    }
+};
+
+
+int max4(int a, int b, int c, int d){
+  if (d>c && d>b && d>a) return(d);
+  else if (c>b && c>a)	 return(c);
+  else return((b>a)?b:a);
+};
+
+
+template<typename T>
+void to_Score_Matrix(T& C1, T& C2, vector<vector<int> >& CT, float epsilon){
+
+  
+  //seq_vector_of_int equal(epsilon);
+  T equal(epsilon);
+  
+
+  int length1 = C1.size();
+  int length2 = C2.size();
+  
+  CT.resize(length1);
+  for(int i=0; i< length1; ++i)
+    CT[i].resize(length2);
+  
+  //CT = new int[length1][length2];
+  
+  //double ctDist;
+  int ctDist;
+  
+  for (int i=0;i<length1;i++)
+    for (int j=0;j<length2;j++)
+      {
+	if( equal(C1[i], C2[j]) == true )
+	  CT[i][j] = 1;
+	else
+	  CT[i][j] = 0;
+
+	//CT[i][j] = equal.similarity(C1[i], C2[j]);
+      }
+  //return CT;
+};
+
+
+template<typename T>
+int localAlign(T& molasc1, T& molasc2, float epsilon) { 
+  int i, j;
+  // int imax=0, jmax=0;
+  int alignmentScore=-88888888;
+  
+  //cout <<"--start align-" <<endl;
+  
+  int l1 = molasc1.size();
+  int l2 = molasc2.size();
+  if(l1 < 2 || l2 < 2 ) return 0;
+  
+  vector<vector<int> > SCORES;
+  to_Score_Matrix(molasc1, molasc2, SCORES, epsilon);
+
+
+  //int l1 = SCORES.size();
+  //int l2 = SCORES[0].size();
+  
+  //int openGapPenalty = -14;
+  //int extensionGapPenalty = -10;
+  //int extensionGapPenalty = - bin_no;
+
+  //int extensionGapPenalty = -1;
+                 
+  //for (i=0;i<l1-1;i++)
+  //    for (j=0;j<l2-1;j++)
+  //        System.out.println(SCORES[i][j]);
+  // l1 and l2 are the sequence lengths + 1
+  // and the edit matrix is an l1 x l2 - matrix:
+  //int L[l1][l2];
+  //= new int [l1][l2];
+  //int E[l1][l2];
+  // = new int [l1][l2];
+  //int F[l1][l2];
+  // = new int [l1][l2];
+
+  vector<vector<int> > L(l1), E(l1), F(l1);
+  //CT.resize(length1);  
+  for(int i=0; i< l1; ++i){
+    L[i].resize(l2,0);
+    E[i].resize(l2,0);
+    F[i].resize(l2,0);
+  }
+  
+  
+  // initialization of array L, E , F
+  L[0][0] = 0;
+  L[1][0] = L[0][1] = openGapPenalty;		
+            
+  for (i=2; i<l1; i++)	L[i][0] = L[i-1][0] + extensionGapPenalty;
+  for (j=2; j<l2; j++)	L[0][j] = L[0][j-1] + extensionGapPenalty;
+  for (i=1; i<l1; i++)	E[i][0] = -1000000000;
+  for (j=1; j<l2; j++)	F[0][j] = -1000000000;
+  
+  // fill in the 2-dim arrays
+  for (j=1; j<l2; j++)
+    {
+      for (i=1; i<l1; i++)
+	{
+	  E[i][j] = max(L[i][j-1]+openGapPenalty, E[i][j-1]+extensionGapPenalty); 
+	  F[i][j] = max(L[i-1][j]+openGapPenalty, F[i-1][j]+extensionGapPenalty); 
+	  L[i][j] = max4(0, E[i][j], L[i-1][j-1]+SCORES[i-1][j-1], F[i][j]);
+	  
+	  if (L[i][j] > alignmentScore)	
+	    {
+	      alignmentScore = L[i][j];
+	      //imax = i;
+	      //jmax = j;
+	    }
+	}
+    }
+  //backTracking(L,E,F,imax,jmax,molasc1,molasc2);
+  //SWResult result = new SWResult(L,E,F,imax,jmax,alignmentScore);
+
+  //cout <<"--end align-" <<endl; 
+  return alignmentScore;
+  //return result;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+// -----------------------------------------------------------------------
+//************************************************************************
+//########################################################################
+
+
+float max4(float a, float b, float c, float d){
+  if (d>c && d>b && d>a) return(d);
+  else if (c>b && c>a)	 return(c);
+  else return((b>a)?b:a);
+};
+
+float arraydist(vector<float>& q, vector<float>& s){
+  
+  if(q.size() != s.size() ){
+    cerr<< "different array size " << endl;
+    return 0;
+  }
+  
+  float sum = 0;
+  
+  for(int i=0; i < q.size() ; i++){
+    sum += (q[i]-s[i])*(q[i]-s[i]);
+  }
+  
+  return sqrt(sum);
+};
+
+
+//template<typename Structure>
+void to_Score_Matrix(Structure& q, Structure& s, vector<vector<float> >& CT){
+  
+  int length1 = q.size() -1;
+  int length2 = s.size() -1;
+  
+  CT.resize(length1);
+  for(int i=0; i< length1; ++i)
+    CT[i].resize(length2);
+  
+  for (int i=0;i<length1;i++)
+    for (int j=0;j<length2;j++){
+      
+      float dim = sqrt((float)q.vaa[i].dmarray.size());
+      //CT[i][j] =  1 - arraydist(q.vaa[i].dmarray, s.vaa[j].dmarray);
+      CT[i][j] =  -10 + 30*(-arraydist(q.vaa[i].dmarray, s.vaa[j].dmarray) + dim)/dim;
+     
+      //if(arraydist(q.vaa[i].dmarray, s.vaa[j].dmarray) < sqrt((float)half_dm_size) )
+      //CT[i][j] = 1;
+      //else
+      //CT[i][j] = 0;
+    }
+  
+};
+
+
+//template<typename Structure>
+float localAlign(Structure& q, Structure& s) { 
+  int i, j;
+  float alignmentScore=-88888888;
+  
+  //cout <<"--start align-" << q.size() <<" " << s.size() <<endl;
+  
+  int l1 = q.size() -1;
+  int l2 = s.size() -1;
+  if(l1 < 2 || l2 < 2 ) return 0;
+  
+  vector<vector<float> > SCORES;
+  to_Score_Matrix(q, s, SCORES);
+  
+  //float openGapPenalty = -14;
+  //float extensionGapPenalty = -10;
+  //float extensionGapPenalty = - bin_no;
+  //float extensionGapPenalty = -5;                 
+
+  vector<vector<float> > L(l1), E(l1), F(l1);
+  for(int i=0; i< l1; ++i){
+    L[i].resize(l2,0);
+    E[i].resize(l2,0);
+    F[i].resize(l2,0);
+  }
+  
+  
+  // initialization of array L, E , F
+  L[0][0] = 0;
+  L[1][0] = L[0][1] = openGapPenalty;		
+  
+  for (i=2; i<l1; i++)	L[i][0] = L[i-1][0] + extensionGapPenalty;
+  for (j=2; j<l2; j++)	L[0][j] = L[0][j-1] + extensionGapPenalty;
+  for (i=1; i<l1; i++)	E[i][0] = -1000000000;
+  for (j=1; j<l2; j++)	F[0][j] = -1000000000;
+  
+  // fill in the 2-dim arrays
+  for (j=1; j<l2; j++)
+    {
+      for (i=1; i<l1; i++)
+	{
+	  E[i][j] = max(L[i][j-1]+openGapPenalty, E[i][j-1]+extensionGapPenalty); 
+	  F[i][j] = max(L[i-1][j]+openGapPenalty, F[i-1][j]+extensionGapPenalty); 
+	  L[i][j] = max4(0.0, E[i][j], L[i-1][j-1]+SCORES[i-1][j-1], F[i][j]);
+	  
+	  if (L[i][j] > alignmentScore)	
+	    {
+	      alignmentScore = L[i][j];
+	      //imax = i;
+	      //jmax = j;
+	    }
+	}
+    }
+  //backTracking(L,E,F,imax,jmax,molasc1,molasc2);
+  //SWResult result = new SWResult(L,E,F,imax,jmax,alignmentScore);
+
+  //cout <<"--end align-" <<endl; 
+  return alignmentScore;
+  //return result;
+};
+
+
+#endif

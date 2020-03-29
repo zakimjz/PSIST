@@ -1,0 +1,417 @@
+/*
+This file is part of ftdock, a program for rigid-body protein-protein docking 
+Copyright (C) 1997-2000 Gidon Moont
+
+Biomolecular Modelling Laboratory
+Imperial Cancer Research Fund
+44 Lincoln's Inn Fields
+London WC2A 3PX
+
++44 (0)20 7269 3348
+http://www.bmm.icnet.uk/
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+*/
+
+#include "structures.h"
+#include <fstream>
+//#include <SpatialIndex.h>
+
+// #include "rtree_load.h"
+
+#include <unistd.h> 
+#include <stdio.h>
+#include <dirent.h>
+#include <sys/stat.h>
+
+extern int bin_no;
+
+extern int win_size;
+extern int half_dm_size;
+
+
+#ifndef __manipulate_structure_h
+#define __manipulate_structure_h
+
+using namespace std;
+
+//using namespace SpatialIndex;
+
+/*
+Structure read_pdb_to_structure( char *pdb_file_name ) {
+
+  FILE	*pdb_file ;
+  char	line_buffer[100] ;
+
+  // What the data is going into
+  Structure This_Structure(pdb_file_name);
+  
+  // Variables from the PDB file
+  int	serial ;  // original atom id in the pdb file
+  char		atom_name[5] ;
+  //char		res_name[4] ;
+  //char		chainID[2] ;
+  //char		res_seq_plus_iCode[6] ;
+  float		coord_x , coord_y , coord_z ;
+
+  //setvbuf( stdout , (char *)NULL , _IONBF , 0 ) ;
+
+  // Open file
+  // cout <<endl;
+  //cout << " ---------------------------------"<<endl;
+  //printf( "  reading parsed pdb file: %s\n", pdb_file_name ) ;
+  if( ( pdb_file = fopen( pdb_file_name, "r" ) ) == NULL ) {
+    printf( "This file does not exist here, or is unreadable.\nDying\n\n" ) ;
+    exit( EXIT_FAILURE ) ;
+  }
+
+  // Read PDB file 
+  while( fgets( line_buffer, 85, pdb_file ) ) {
+
+      if( strncmp( line_buffer, "ATOM", 4 ) == 0 ) {
+	  
+	  strncpy( atom_name, line_buffer+12, 4 ) ;
+	  strncpy( atom_name + 4, "\0", 1 ) ;
+	  
+	  //the first character of atom_name (atom_name[0]) is empty/space.
+ 
+	  if( strncmp( atom_name, " CA", 3 ) == 0) {
+	      // Have an CA ATOM 	  
+	      sscanf( line_buffer +  6 , "%5d" , &serial ) ;
+	      sscanf( line_buffer + 30 , "%8f" , &coord_x ) ;
+	      sscanf( line_buffer + 38 , "%8f" , &coord_y ) ;
+	      sscanf( line_buffer + 46 , "%8f" , &coord_z ) ;
+
+	      
+	      This_Structure.add_atom(serial, coord_x, coord_y, coord_z); 
+
+	  } // CA atom
+      } // atom line
+  } //end of pdb file
+
+
+  
+  fclose( pdb_file ) ;
+  return This_Structure ;
+}
+
+*/
+
+
+Structure read_parsed_pdb_to_structure(const char *pdb_file_name ) {
+
+  FILE	*pdb_file ;
+
+  /* What the data is going into */
+  //Structure This_Structure(pdb_file_name);
+  Structure This_Structure;
+
+  /* Variables from the PDB file */
+  //int	serial ;  // original atom id in the pdb file
+  int           aid;
+  float           atom_name;
+  
+  //char		atom_name[5] ;
+  //char		res_name[4] ;
+  //char		chainID[2] ;
+  //char		res_seq_plus_iCode[6] ;
+  float		coord_x , coord_y , coord_z ;
+
+  //setvbuf( stdout , (char *)NULL , _IONBF , 0 ) ;
+
+  /* Open file */
+  //cerr <<endl;
+  //cerr << " ---------------------------------"<<endl;
+  //printf( "reading parsed pdb file: %s\n", pdb_file_name ) ;
+
+  ifstream fin(pdb_file_name);
+  if (! fin)
+    {
+	//cerr << "Cannot open data file " << pdb_file_name << "." << endl;
+	return This_Structure;
+    }
+  
+  // Read PDB file 
+  
+  Amino_Acid aa;
+  int count  = 1;
+  
+  while (fin)
+    {
+      //fin >> serial >> coord_x >> coord_y >> coord_z;
+      fin >> aid >> atom_name >>  coord_x >> coord_y >> coord_z;
+      
+      if( atom_name == 1.0){ // CA atom
+	aa.CA_Atom.set_coord(coord_x, coord_y, coord_z);
+	//aa.set_aid(aid);
+      }
+      if( atom_name == 2.0) // N atom
+	aa.N_Atom.set_coord(coord_x, coord_y, coord_z); 
+      if( atom_name == 3.0) // C atom
+	aa.C_Atom.set_coord(coord_x, coord_y, coord_z); 
+      
+      if ((count % 3) == 0)
+	This_Structure.vaa.push_back(aa);
+      
+      count++;
+      
+      if (! fin.good()) continue; // skip newlines, etc.
+      
+    } //end of pdb file
+  
+  fin.close() ;
+  return This_Structure ;
+}
+
+
+void to_gamma(vector<float>& high, vector<float>& low)
+{
+  //cout <<"----------------togamma-------------" <<endl;
+  
+  int hsize = high.size() -1;
+  
+  float sum =0;
+  int k =0;
+  int count =0;
+  int i =0;
+  
+  while(i < hsize){  
+    
+    while( k < 140 && i < hsize){
+      sum += high[i++];
+      k++;
+    }
+    if(k == 140 ){
+      low.push_back(sum);
+      //cout << sum << " ";
+      count ++;
+      k = 0;
+      sum =0;
+    }
+  }
+  //cout <<endl;
+  
+  //cout << "_____low________" << low.size() <<endl;
+  
+};
+
+
+
+void read_gamma_to_structure(const char *pdb_file_name, Structure& s) {
+
+  int ssize = s.vaa.size();
+  
+  //cout << "----gamma file----" << pdb_file_name << "-size-" << ssize << endl;
+  
+  FILE	*pdb_file ;
+  
+  ifstream fin(pdb_file_name);
+  if (! fin){
+    //cerr << "Cannot open data file " << pdb_file_name << "." << endl;
+    return;
+  }
+  
+  int count =0;
+  
+  while (fin)
+    {
+      float first;
+      fin >> first;
+      //cout << "---first----------" << first <<endl;
+      
+      //if( !(first >= 0)) continue;
+      //float sum = 0;
+      
+      vector<float> gv(281);
+      for(int i =0; i < 281; ++i){
+	fin >> gv[i];
+	//cout << gv[i] << " ";
+	//sum += gv[i];
+      }
+      //cout << endl;
+      //cout << "-----------count-----------" << count <<endl;
+      
+      //if(sum > 0.5 )
+      to_gamma(gv, s.vaa[count].gammadata);
+      
+      if (! fin.good()) continue; // skip newlines, etc.
+      count++;
+      if(count == ssize) 
+	break;
+    }
+  
+  fin.close();
+  //cout << "-----------done------------------" << count << endl;
+  
+}
+
+
+/*
+void  read_parsed_pdb_to_vector(const char *pdb_file_name, vector< vector<double> >& cacoord){
+
+  FILE	*pdb_file ;
+  double  coord_x , coord_y , coord_z ;
+
+  ifstream fin(pdb_file_name);
+  if (! fin)
+   	return;
+  
+  int aid;
+ 
+
+  vector<double> vd(3,0);
+  while (fin)
+    {
+	float atomtype; 
+	fin >> aid >> atomtype >>  coord_x >> coord_y >> coord_z;
+	
+	if( atomtype == 1.0){ // CA atom
+	    vd[0] = coord_x;
+	    vd[1] = coord_y;
+	    vd[2] = coord_z;
+	    cacoord.push_back(vd);
+	}
+	if (! fin.good()) continue; // skip newlines, etc.
+    } //end of pdb file
+ 
+  fin.close() ;
+}
+
+*/
+
+float pairwise_distance(Atom& a1, Atom& a2){
+  return sqrt( pow((a1.coord[0]-a2.coord[0]),2) + pow((a1.coord[1]-a2.coord[1]),2) + pow((a1.coord[2]-a2.coord[2]),2) );
+}
+
+float pairwise_angle(Amino_Acid& a1, Amino_Acid& a2)
+{
+  //float d1[] = {0,0,0};
+  //float d2[] = {0,0,0};
+  
+  vector<float> d1(3);
+  vector<float> d2(3);
+  
+  //cout<< "---d1---" << d1[0] << " " << d1[1] << " " << d1[2] << endl;
+  a1.direction(d1);
+  a2.direction(d2);
+  
+  //cout<< "d1 " << d1[0] << " " << d1[1] << " " << d1[2] << endl;
+  
+  float e1, e2, e3;
+  e1 = sqrt( pow(d1[0],2) +  pow(d1[1],2) +  pow(d1[2],2) );
+  e2 = sqrt( pow(d2[0],2) +  pow(d2[1],2) +  pow(d2[2],2) );
+  e3 = sqrt( pow(d2[0]-d1[0],2) +  pow(d2[1]-d1[1],2) +  pow(d2[2]-d1[2],2) );
+  
+  if(e1 == 0 || e2 ==0 )
+    return 0;
+  else
+    return ((pow(e1,2)+pow(e2,2)-pow(e3,2))/(2*e1*e2));
+}
+
+
+
+void calculate_gamma_array(Structure& structure)
+{
+    int backbone_size = structure.vaa.size();
+
+    for(int i= 0 ; i< backbone_size - win_size +1; i++)
+    {
+      int size = structure.vaa[i].gammadata.size();
+      
+      for(int j= i + 1 ; j < i + win_size ; j++) 
+	{
+	  float dist = 0;
+	  for(int k = 0; k < size; ++k)
+	    dist += (structure.vaa[i].gammadata[k] - structure.vaa[i].gammadata[k])*(structure.vaa[i].gammadata[k] - structure.vaa[i].gammadata[k]);
+	  
+	  structure.vaa[i].gammaarray.push_back(sqrt(dist) );
+	}//end j loop
+    }//end i loop
+    
+}
+
+
+
+
+
+
+
+
+void calculate_distance_matrix(Structure& structure)
+{
+    int backbone_size = structure.vaa.size();
+
+    for(int i= 0 ; i< backbone_size - win_size +1; i++)
+    {
+	for(int j= i + 1 ; j < i + win_size ; j++) 
+	{
+	    float ca_distance = pairwise_distance(structure.vaa[i].CA_Atom, structure.vaa[j].CA_Atom);
+	    float angle = pairwise_angle(structure.vaa[i], structure.vaa[j]);
+	    
+	    //float n_distance = pairwise_distance(structure.vaa[i].N_Atom, structure.vaa[j].N_Atom);
+	    //float c_distance = pairwise_distance(structure.vaa[i].C_Atom, structure.vaa[j].C_Atom);
+
+	    structure.vaa[i].CA_Atom.fill_dmarray(j-i-1, ca_distance);
+	    // structure.vaa[k].N_Atom.fill_dm(i-k+ halfwin ,j-k+halfwin, n_distance);
+	    //structure.vaa[k].C_Atom.fill_dm(i-k+ halfwin ,j-k+halfwin, c_distance);
+	    structure.vaa[i].fill_anglearray(j-i-1, angle);
+	    //cout << i <<"\t" << j<< "\t"<< k <<"\t"<<distance<<endl;
+	    
+	}//end j loop
+    }//end i loop
+    
+}
+
+
+void calculate_dm_array(Structure& strct)
+{
+  //for(int i= (win_size-1)/2; i< strct.vaa.size()- (win_size-1)/2; i++){
+  for(int i= 0; i< strct.vaa.size()- win_size+1; ++i){
+    //strct.vaa[i].CA_Atom.fill_dmarray();  
+    //strct.vaa[i].N_Atom.fill_dmarray();
+    //strct.vaa[i].C_Atom.fill_dmarray();
+    //cout << "i---------" << i <<endl;
+    
+    strct.vaa[i].fill_dmarray();
+  }
+  
+  //strct.print();
+}
+
+
+/*
+int array_mapping(float dmarray[])
+{
+  //vector<int> vint(2*half_dm_size, 0);
+  int mappedvalue = 0;
+  for(int i=0; i < 2*half_dm_size; i++){
+    //vint[i] = (int) dmarray[i]*bin_no;
+    mappedvalue += ((int) (dmarray[i]*bin_no)) * ((int) pow((float)bin_no, i));
+  }
+  return mappedvalue;
+  
+}
+*/
+
+
+
+
+
+
+
+
+
+#endif
